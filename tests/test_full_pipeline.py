@@ -23,7 +23,6 @@ from aieos_pipeline_runner.resolver import Resolver
 from aieos_pipeline_runner.run_validator import RunValidator
 from aieos_pipeline_runner.spec_validator import validate_spec
 
-
 CI_SPEC = """\
 spec_version: "1.0.0"
 code_repo: "wtlinnertz/demo"
@@ -85,8 +84,14 @@ def test_full_pipeline_pass_path(tmp_path: Path):
 
 
 def test_full_pipeline_fail_path_fails_at_run_validator(tmp_path: Path):
-    """Mock returns a critical CVE for security.sast; run validator FAILs."""
-    spec = _load_ci(tmp_path)
+    """Mock returns a SARIF finding for security.sast; with max_severity=medium
+    the 'error' level (mapped to 'high') exceeds the threshold and run
+    validator FAILs."""
+    spec_with_tighter_threshold = CI_SPEC.replace("max_severity: high", "max_severity: medium")
+    p = tmp_path / "ci.spec.yaml"
+    p.write_text(spec_with_tighter_threshold)
+    spec = load_spec_from_file(p, expected_hash=hashlib.sha256(p.read_bytes()).hexdigest())
+
     assert validate_spec(spec).result == ValidationResult.PASS
 
     plan = Resolver(registry=MockRegistry()).resolve(spec)
