@@ -23,6 +23,9 @@ dev = [
     "pytest>=8.0",
 ]
 
+[project.scripts]
+aieos-pipeline-runner = "aieos_pipeline_runner.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
