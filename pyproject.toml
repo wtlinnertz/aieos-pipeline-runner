@@ -10,7 +10,11 @@ readme = "README.md"
 license = { file = "LICENSE" }
 authors = [{ name = "Todd Linnertz" }]
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "jsonschema[format]>=4.20",
+    "pyyaml>=6.0",
+    "structlog>=24.0",
+]
 
 [project.optional-dependencies]
 dev = [

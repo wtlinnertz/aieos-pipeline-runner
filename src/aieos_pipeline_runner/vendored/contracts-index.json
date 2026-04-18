@@ -1,0 +1,221 @@
+{
+  "version": "v1.0-contracts",
+  "contracts": {
+    "build.artifact": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "oci-image-digest",
+        "build-log",
+        "exit-code"
+      ],
+      "conformance_suite": "build.artifact-suite"
+    },
+    "deploy.environment": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "reconciled-commit-sha",
+        "reconciler-status",
+        "exit-code"
+      ],
+      "conformance_suite": "deploy.environment-suite"
+    },
+    "deploy.promote": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "promotion-record",
+        "exit-code"
+      ],
+      "conformance_suite": "deploy.promote-suite"
+    },
+    "deploy.rollback": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "rollback-record",
+        "reconciler-status",
+        "exit-code"
+      ],
+      "conformance_suite": "deploy.rollback-suite"
+    },
+    "publish.artifact": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "published-artifact-ref",
+        "exit-code"
+      ],
+      "conformance_suite": "publish.artifact-suite"
+    },
+    "publish.manifest": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "manifests-repo-commit-sha",
+        "manifest-bundle-ref",
+        "exit-code"
+      ],
+      "conformance_suite": "publish.manifest-suite"
+    },
+    "sbom.generate": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/cyclonedx-1.6-sbom.schema.json",
+      "required_evidence": [
+        "cyclonedx-sbom",
+        "exit-code"
+      ],
+      "conformance_suite": "sbom.generate-suite"
+    },
+    "sbom.verify": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "verification-result",
+        "failure-reasons",
+        "exit-code"
+      ],
+      "conformance_suite": "sbom.verify-suite"
+    },
+    "security.container-scan": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/cyclonedx-1.6-findings.schema.json",
+      "required_evidence": [
+        "cyclonedx-findings",
+        "exit-code"
+      ],
+      "conformance_suite": "security.container-scan-suite"
+    },
+    "security.dast": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/sarif-2.1.0.schema.json",
+      "required_evidence": [
+        "sarif-report",
+        "exit-code"
+      ],
+      "conformance_suite": "security.dast-suite"
+    },
+    "security.license-scan": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/cyclonedx-1.6-findings.schema.json",
+      "required_evidence": [
+        "cyclonedx-findings",
+        "exit-code"
+      ],
+      "conformance_suite": "security.license-scan-suite"
+    },
+    "security.sast": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/sarif-2.1.0.schema.json",
+      "required_evidence": [
+        "sarif-report",
+        "exit-code"
+      ],
+      "conformance_suite": "security.sast-suite"
+    },
+    "security.sca": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/cyclonedx-1.6-findings.schema.json",
+      "required_evidence": [
+        "cyclonedx-findings",
+        "exit-code"
+      ],
+      "conformance_suite": "security.sca-suite"
+    },
+    "security.secret-scan": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/sarif-2.1.0.schema.json",
+      "required_evidence": [
+        "sarif-report",
+        "exit-code"
+      ],
+      "conformance_suite": "security.secret-scan-suite"
+    },
+    "sign.artifact": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/oci-signing-bundle.schema.json",
+      "required_evidence": [
+        "signed-image-digest",
+        "sigstore-bundle",
+        "exit-code"
+      ],
+      "conformance_suite": "sign.artifact-suite"
+    },
+    "sign.attestation": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/oci-signing-bundle.schema.json",
+      "required_evidence": [
+        "sigstore-bundle",
+        "in-toto-statement",
+        "exit-code"
+      ],
+      "conformance_suite": "sign.attestation-suite"
+    },
+    "test.contract": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/junit-xml.schema.json",
+      "required_evidence": [
+        "junit-report",
+        "exit-code"
+      ],
+      "conformance_suite": "test.contract-suite"
+    },
+    "test.e2e": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/junit-xml.schema.json",
+      "required_evidence": [
+        "junit-report",
+        "exit-code"
+      ],
+      "conformance_suite": "test.e2e-suite"
+    },
+    "test.integration": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/junit-xml.schema.json",
+      "required_evidence": [
+        "junit-report",
+        "exit-code"
+      ],
+      "conformance_suite": "test.integration-suite"
+    },
+    "test.unit": {
+      "contract_version": "1.0.0",
+      "output_schema": "findings/schemas/junit-xml.schema.json",
+      "required_evidence": [
+        "junit-report",
+        "coverage-report",
+        "exit-code"
+      ],
+      "conformance_suite": "test.unit-suite"
+    },
+    "verify.health": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "per-check-results",
+        "exit-code"
+      ],
+      "conformance_suite": "verify.health-suite"
+    },
+    "verify.slo": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "per-slo-measurements",
+        "exit-code"
+      ],
+      "conformance_suite": "verify.slo-suite"
+    },
+    "verify.smoke": {
+      "contract_version": "1.0.0",
+      "output_schema": null,
+      "required_evidence": [
+        "observed-response",
+        "pass-fail",
+        "exit-code"
+      ],
+      "conformance_suite": "verify.smoke-suite"
+    }
+  }
+}

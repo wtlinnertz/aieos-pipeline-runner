@@ -1,0 +1,28 @@
+{
+  "version": "v1.0-taxonomy",
+  "actions": [
+    "build.artifact",
+    "deploy.environment",
+    "deploy.promote",
+    "deploy.rollback",
+    "publish.artifact",
+    "publish.manifest",
+    "sbom.generate",
+    "sbom.verify",
+    "security.container-scan",
+    "security.dast",
+    "security.license-scan",
+    "security.sast",
+    "security.sca",
+    "security.secret-scan",
+    "sign.artifact",
+    "sign.attestation",
+    "test.contract",
+    "test.e2e",
+    "test.integration",
+    "test.unit",
+    "verify.health",
+    "verify.slo",
+    "verify.smoke"
+  ]
+}
