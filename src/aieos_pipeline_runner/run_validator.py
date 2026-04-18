@@ -22,7 +22,6 @@ from typing import Any
 
 from .artifact_store import ArtifactStore
 from .models import (
-    BoundPlan,
     LoadedSpec,
     RunRecord,
     SpecKind,

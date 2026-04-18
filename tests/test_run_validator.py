@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from aieos_pipeline_runner.artifact_store import FilesystemArtifactStore
 from aieos_pipeline_runner.models import (
