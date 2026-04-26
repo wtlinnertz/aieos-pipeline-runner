@@ -286,3 +286,211 @@ def test_max_cvss_criterion_enforced():
 
     assert report.result == ValidationResult.FAIL
     assert "8.5" in " ".join(report.checks[0].details)
+
+
+# ---------------------------------------- new criterion evaluators (Track I) -
+
+
+def test_signing_identity_type_keypair_recognized():
+    spec = _ci_spec([{"action": "sign.artifact", "criteria": {"signing_identity_type": "keypair"}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="sign.artifact",
+                adapter_id="adapter-cosign-sign",
+                status=TaskStatus.COMPLETED,
+                findings={
+                    "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+                    "verificationMaterial": {"publicKey": {"hint": "abc"}},
+                    "messageSignature": {"signature": "deadbeef"},
+                },
+                evidence=["sigstore-bundle:inline"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_signing_identity_type_mismatch_fails():
+    spec = _ci_spec(
+        [{"action": "sign.artifact", "criteria": {"signing_identity_type": "ambient-oidc"}}]
+    )
+    record = _record(
+        [
+            RunTaskRecord(
+                action="sign.artifact",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings={
+                    "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+                    "verificationMaterial": {"publicKey": {"hint": "x"}},
+                    "messageSignature": {"signature": "x"},
+                },
+                evidence=[],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.FAIL
+
+
+def test_format_cyclonedx_passes_for_cyclonedx_sbom():
+    spec = _ci_spec([{"action": "sbom.generate", "criteria": {"format": "cyclonedx"}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="sbom.generate",
+                adapter_id="adapter-syft-sbom",
+                status=TaskStatus.COMPLETED,
+                findings={"bomFormat": "CycloneDX", "specVersion": "1.6", "components": []},
+                evidence=["cyclonedx-sbom:inline"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_destination_registry_required_passes_with_real_ref():
+    spec = _ci_spec(
+        [{"action": "publish.artifact", "criteria": {"destination_registry_required": True}}]
+    )
+    record = _record(
+        [
+            RunTaskRecord(
+                action="publish.artifact",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings=None,
+                evidence=["published-artifact-ref:ghcr.io/wtlinnertz/x@sha256:abc123"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_destination_registry_required_fails_when_missing():
+    spec = _ci_spec(
+        [{"action": "publish.artifact", "criteria": {"destination_registry_required": True}}]
+    )
+    record = _record(
+        [
+            RunTaskRecord(
+                action="publish.artifact",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings=None,
+                evidence=["exit-code:0"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.FAIL
+
+
+def test_artifact_type_oci_image_recognized():
+    spec = _ci_spec([{"action": "build.artifact", "criteria": {"artifact_type": "oci-image"}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="build.artifact",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings=None,
+                evidence=["oci-image-digest:sha256:abc", "tag:demo:1", "exit-code:0"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_reconciled_within_seconds_accepts_when_reconciler_acked():
+    spec = _ci_spec(
+        [{"action": "deploy.environment", "criteria": {"reconciled_within_seconds": 300}}]
+    )
+    record = _record(
+        [
+            RunTaskRecord(
+                action="deploy.environment",
+                adapter_id="adapter-flux-handoff",
+                status=TaskStatus.COMPLETED,
+                findings=None,
+                evidence=["reconciled-commit-sha:0123", "reconciler-status:accepted"],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_all_endpoints_healthy_passes_when_all_pass():
+    spec = _ci_spec([{"action": "verify.health", "criteria": {"all_endpoints_healthy": True}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="verify.health",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings={"checks": [{"pass": True}, {"pass": True}]},
+                evidence=[],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS
+
+
+def test_all_endpoints_healthy_fails_on_any_unhealthy():
+    spec = _ci_spec([{"action": "verify.health", "criteria": {"all_endpoints_healthy": True}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="verify.health",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings={"checks": [{"pass": True}, {"pass": False}]},
+                evidence=[],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.FAIL
+
+
+def test_min_success_rate_threshold_enforced():
+    spec = _ci_spec([{"action": "verify.slo", "criteria": {"min_success_rate": 0.99}}])
+    record = _record(
+        [
+            RunTaskRecord(
+                action="verify.slo",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings={"observed_success_rate": 0.985},
+                evidence=[],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.FAIL
+
+
+def test_window_seconds_accepted_as_input():
+    spec = _ci_spec(
+        [{"action": "verify.slo", "criteria": {"window_seconds": 600, "min_success_rate": 0.99}}]
+    )
+    record = _record(
+        [
+            RunTaskRecord(
+                action="verify.slo",
+                adapter_id="a",
+                status=TaskStatus.COMPLETED,
+                findings={"observed_success_rate": 0.999},
+                evidence=[],
+            )
+        ]
+    )
+    report = RunValidator().validate(spec, record)
+    assert report.result == ValidationResult.PASS

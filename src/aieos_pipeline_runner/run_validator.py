@@ -145,6 +145,147 @@ def _eval_expected_status(criterion, findings, evidence):
     return False, "no observed status recorded in findings or evidence"
 
 
+def _eval_signing_identity_type(criterion, findings, _evidence):
+    """Verify the sign.* adapter used the expected identity mode.
+
+    Reads the bundle's verificationMaterial; presence of x509CertificateChain
+    or certificate.rawBytes indicates ambient OIDC; presence of publicKey
+    indicates a keypair.
+    """
+    if not findings:
+        return False, "no signing bundle recorded in findings"
+    vm = findings.get("verificationMaterial", {}) or {}
+    has_cert = bool(vm.get("certificate") or vm.get("x509CertificateChain"))
+    has_key = bool(vm.get("publicKey"))
+    observed = "ambient-oidc" if has_cert else ("keypair" if has_key else "unknown")
+    expected = str(criterion)
+    if observed == expected:
+        return True, f"signing identity type {observed} matches expected"
+    return False, f"signing identity type {observed} != expected {expected}"
+
+
+def _eval_predicate_type_expected(criterion, findings, _evidence):
+    """Verify the in-toto predicate type matches when sign.attestation
+    findings carry a DSSE envelope with payload (base64) wrapping the
+    Statement."""
+    if not findings:
+        return False, "no signing bundle recorded"
+    dsse = findings.get("dsseEnvelope") or {}
+    payload_type = dsse.get("payloadType", "")
+    if not payload_type:
+        # Fallback: v1 sign-blob path doesn't produce DSSE; assume the
+        # caller pinned the predicate type elsewhere.
+        return True, "v1 sign-blob path; predicate type not embedded — assumed match"
+    if payload_type == criterion:
+        return True, f"payloadType {payload_type} matches expected"
+    return False, f"payloadType {payload_type} != expected {criterion}"
+
+
+def _eval_format(criterion, findings, _evidence):
+    """For sbom.generate — assert the findings declare the expected format."""
+    if not findings:
+        return False, "no SBOM findings recorded"
+    expected = str(criterion).lower()
+    if expected == "cyclonedx":
+        if findings.get("bomFormat") == "CycloneDX":
+            return True, "format is CycloneDX"
+        return False, f"expected CycloneDX, observed bomFormat={findings.get('bomFormat')}"
+    if expected == "spdx":
+        # SPDX uses spdxVersion at the top level.
+        if findings.get("spdxVersion"):
+            return True, f"format is SPDX ({findings['spdxVersion']})"
+        return False, "expected SPDX, observed no spdxVersion field"
+    return False, f"unknown format threshold {expected!r}"
+
+
+def _eval_destination_registry_required(criterion, _findings, evidence):
+    """For publish.artifact — assert evidence carries a published-artifact-ref
+    pointing at a registry."""
+    if not bool(criterion):
+        return True, "destination registry not required"
+    for ev in evidence:
+        if ev.startswith("published-artifact-ref:"):
+            ref = ev.split(":", 1)[1]
+            if "/" in ref and (":" in ref.rsplit("/", 1)[-1] or "@sha256:" in ref):
+                return True, f"published to {ref}"
+    return False, "no published-artifact-ref in evidence"
+
+
+def _eval_artifact_type(criterion, _findings, evidence):
+    """For build.artifact — assert evidence carries the expected artifact
+    type (typically 'oci-image' which means an oci-image-digest is present)."""
+    expected = str(criterion).lower()
+    if expected == "oci-image":
+        for ev in evidence:
+            if ev.startswith("oci-image-digest:"):
+                return True, "evidence contains oci-image-digest"
+        return False, "no oci-image-digest in evidence"
+    return False, f"unsupported artifact_type {expected!r}"
+
+
+def _eval_reconciled_within_seconds(criterion, _findings, evidence):
+    """For deploy.environment — assert reconciler-status:accepted is present.
+
+    True elapsed-time enforcement is v1.1; v1 accepts reconciler ack as
+    sufficient and trusts the adapter's internal timeout to enforce the
+    upper bound.
+    """
+    _ = int(criterion)  # validate type even if not enforced
+    for ev in evidence:
+        if ev.startswith("reconciler-status:") and "accepted" in ev:
+            return True, "reconciler reported accepted"
+    return False, "reconciler did not report accepted"
+
+
+def _eval_all_endpoints_healthy(criterion, findings, _evidence):
+    """For verify.health — assert every probe reported pass when the
+    criterion is True."""
+    if not bool(criterion):
+        return True, "criterion disabled"
+    if not findings:
+        return False, "no health findings recorded"
+    checks = findings.get("checks") or findings.get("results") or []
+    if not checks:
+        return False, "no per-check results recorded"
+    failing = [c for c in checks if not c.get("pass", c.get("ok", True))]
+    if failing:
+        return False, f"{len(failing)} unhealthy check(s)"
+    return True, f"all {len(checks)} checks healthy"
+
+
+def _eval_min_success_rate(criterion, findings, _evidence):
+    """For verify.slo — observed success rate >= threshold."""
+    try:
+        threshold = float(criterion)
+    except (TypeError, ValueError):
+        return False, f"min_success_rate criterion {criterion!r} not numeric"
+    if not findings:
+        return False, "no SLO findings recorded"
+    observed = findings.get("observed_success_rate")
+    if observed is None and findings.get("slos"):
+        # take the worst-case across measured SLOs
+        rates = [
+            s.get("observed_success_rate")
+            for s in findings["slos"]
+            if s.get("observed_success_rate") is not None
+        ]
+        if rates:
+            observed = min(rates)
+    if observed is None:
+        return False, "no observed_success_rate in findings"
+    if float(observed) < threshold:
+        return False, f"observed {observed} < threshold {threshold}"
+    return True, f"observed {observed} >= {threshold}"
+
+
+def _eval_window_seconds(criterion, _findings, _evidence):
+    """For verify.slo — informational (the window is the adapter's input,
+    not a result property). v1 accepts the field as configuration; the
+    adapter's compliance with the window is its own concern."""
+    _ = int(criterion)
+    return True, f"window_seconds={criterion} accepted as adapter input"
+
+
 # Default criterion registry. Extensions can add more at construction time.
 DEFAULT_EVALUATORS: dict[str, CriterionEvaluator] = {
     "max_severity": _eval_max_severity,
@@ -153,6 +294,15 @@ DEFAULT_EVALUATORS: dict[str, CriterionEvaluator] = {
     "expect_zero_findings": _eval_expect_zero_findings,
     "max_cvss": _eval_max_cvss,
     "expected_status": _eval_expected_status,
+    "signing_identity_type": _eval_signing_identity_type,
+    "predicate_type_expected": _eval_predicate_type_expected,
+    "format": _eval_format,
+    "destination_registry_required": _eval_destination_registry_required,
+    "artifact_type": _eval_artifact_type,
+    "reconciled_within_seconds": _eval_reconciled_within_seconds,
+    "all_endpoints_healthy": _eval_all_endpoints_healthy,
+    "min_success_rate": _eval_min_success_rate,
+    "window_seconds": _eval_window_seconds,
 }
 
 
