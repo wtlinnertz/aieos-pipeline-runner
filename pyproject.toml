@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aieos-pipeline-runner"
-version = "1.0.1"
+version = "1.1.0"
 description = "AIEOS pipeline runner — compiles frozen CI/CD specs into execution plans"
 readme = "README.md"
 license = { file = "LICENSE" }
